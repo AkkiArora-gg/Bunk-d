@@ -4,7 +4,8 @@ export const starterProfile = {
   moveIn: "Flexible", sleep: "Night owl", cleanliness: "Very tidy",
   social: "Balanced", guests: "Sometimes", smoking: "No",
   food: "Non-vegetarian", noise: "Moderate", personalSpace: "High",
-  roomType: "Either", bio: ""
+  roomType: "Either", bio: "",
+  avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=600"
 };
 
 export const demoUsers = [

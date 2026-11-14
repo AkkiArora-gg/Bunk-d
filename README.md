@@ -1,55 +1,35 @@
-# RoomSync
+# LiveIn
 
-RoomSync is a hackathon MVP for lifestyle-first flatmate discovery. It helps people compare everyday living preferences, not just rent and location.
+LiveIn is a modern, Tinder-style flatmate discovery and lifestyle compatibility platform. It helps people compare everyday living habits, personalities, and budgets through an intuitive swipeable interface and weighted compatibility matching.
 
 ## Features
-- Multi-step lifestyle onboarding
-- Weighted, explainable compatibility scoring
-- Budget and locality filtering
-- Discover profiles with Like / Pass actions
-- Mutual-match demo flow
-- Match dashboard and profile detail modal
-- Persistent browser demo data using localStorage
-- Responsive desktop and mobile UI
+- **Tinder-Style Swiping:** Natural touch & mouse dragging, directional tilt, visual `LIKE` and `NOPE` stamps, and animated release physics.
+- **Background Card Stack:** Realistic layered card depth to preview upcoming flatmates.
+- **Match Celebration:** High-energy "It's a Match!" celebration modal featuring dual profile photos, compatibility score, and direct actions.
+- **Explainable Compatibility Engine:** Multi-factor weighted lifestyle algorithm comparing sleep, cleanliness, social battery, guest habits, noise, food, and budget.
+- **Multi-Step Onboarding:** Guided lifestyle and preference questionnaire.
+- **Matches Dashboard & Profile Modals:** View connected flatmates with deep-dive lifestyle breakdowns.
+- **Persistence:** Instant client-side persistence using browser `localStorage`.
+- **Responsive Design:** Polished, responsive layout optimized for mobile and desktop screens.
 
-## Tech stack
-- React + Vite
-- JavaScript
-- CSS
-- Lucide React icons
-- Browser localStorage for demo persistence
+## Tech Stack
+- React 19
+- Vite
+- Lucide React
+- CSS3 (Vanilla design tokens, transforms & micro-animations)
 
-## Run locally
+## Run Locally
 ```bash
 npm install
 npm run dev
 ```
-Open the local URL printed by Vite.
+Open the local URL printed by Vite (typically `http://localhost:5173/`).
 
-## Production build
+## Production Build
 ```bash
 npm run build
 npm run preview
 ```
 
-## Demo notes
-This version is a single-browser MVP. It uses seeded demo profiles and localStorage; it does not yet provide real multi-user authentication, cloud synchronization, or real-time chat. Some seeded profiles reciprocate likes to demonstrate the mutual-match flow.
-
-Use the **Reset demo** option in the sidebar to restart the experience.
-
-## Suggested next steps
-1. Add Firebase or Supabase authentication and database.
-2. Move profile, likes, and matches into a cloud database.
-3. Implement real mutual-match transactions and chat.
-4. Add verified profiles and safety/reporting workflows.
-5. Add privacy controls and production security rules.
-
-## Project structure
-```text
-src/
-  App.jsx
-  data.js
-  matching.js
-  main.jsx
-  styles.css
-```
+## Demo Notes
+This version is a high-fidelity client MVP. It uses seeded demo profiles and localStorage. Reciprocal likes from selected profiles (Aarav, Ananya, Ishita) simulate mutual matching so you can immediately experience the "It's a Match!" flow. Use **Reset demo** in the sidebar to restart anytime.
