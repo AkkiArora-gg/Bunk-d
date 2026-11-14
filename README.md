@@ -1,10 +1,10 @@
-# LiveIn — Find Your Perfect Flatmate
+# Bunk'd — Find Your Perfect Flatmate
 
-**LiveIn** is a flatmate discovery and roommate matching platform that makes finding the right person to live with easier, smarter, and more reliable.
+**Bunk'd** is a flatmate discovery and roommate matching platform that makes finding the right person to live with easier, smarter, and more reliable.
 
 Finding a place to live is one thing. Finding someone you can comfortably share it with is another.
 
-Inspired by the swipe-based experience of modern dating platforms, LiveIn brings a fresh approach to roommate discovery. Users can create profiles, showcase their lifestyle and preferences, discover potential flatmates, and connect with people who match their living habits.
+Inspired by the swipe-based experience of modern dating platforms, Bunk'd brings a fresh approach to roommate discovery. Users can create profiles, showcase their lifestyle and preferences, discover potential flatmates, and connect with people who match their living habits.
 
 ## Key Features
 
@@ -21,13 +21,14 @@ Finding a compatible flatmate is often a frustrating process involving scattered
 
 Most existing platforms focus on finding rooms rather than finding the right people to share them with.
 
-LiveIn shifts the focus from simply finding accommodation to finding compatibility.
+Bunk'd shifts the focus from simply finding accommodation to finding compatibility.
 
 ## Our Solution
 
-LiveIn combines the familiarity of dating-app interfaces with the practical requirements of roommate discovery.
+Bunk'd combines the familiarity of dating-app interfaces with the practical requirements of roommate discovery.
 
 Instead of endlessly browsing listings, users can:
+
 1. Build a profile that reflects their personality and lifestyle.
 2. Discover people looking for compatible living arrangements.
 3. Swipe through potential flatmates.
@@ -60,7 +61,7 @@ Instead of endlessly browsing listings, users can:
 git clone <YOUR_REPOSITORY_URL>
 
 # Navigate into the project
-cd livein
+cd bunkd
 
 # Install dependencies
 npm install
@@ -73,7 +74,6 @@ Open `http://localhost:3000` in your browser.
 
 ## Project Roadmap
 
-- [x] Project conceptualization and initial setup
 - [ ] User authentication and registration
 - [ ] Profile creation and customization
 - [ ] Flatmate discovery interface
@@ -85,4 +85,4 @@ Open `http://localhost:3000` in your browser.
 
 ## Vision
 
-**LiveIn — Because finding a home is easy. Finding the right person to share it with shouldn't be hard.**
+**Bunk'd — Don't just find a place. Find your people.**
