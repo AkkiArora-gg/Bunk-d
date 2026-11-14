@@ -46,6 +46,19 @@ const read = (key, fallbackKey, fallback) => {
 
 const money = n => `₹${Number(n).toLocaleString("en-IN")}`;
 
+export const DEFAULT_FILTERS = {
+  gender: "Any",
+  food: "Any",
+  drinking: "Any",
+  smoking: "Any",
+  location: "All",
+  sleep: "Any",
+  cleanliness: "Any",
+  moveIn: "Any",
+  budgetMin: 5000,
+  budgetMax: 30000
+};
+
 // Pre-seeded starter messages for demonstrative reciprocal matches
 const STARTER_MESSAGES = {
   u1: [
@@ -72,6 +85,33 @@ const STARTER_MESSAGES = {
       sender: "u6",
       text: "Hi! Great to connect with another quiet, book-loving flatmate. Are you still looking around North Delhi?",
       timestamp: "1:45 PM",
+      isRead: false
+    }
+  ],
+  u8: [
+    {
+      id: "init_u8",
+      sender: "u8",
+      text: "Hey! Glad we connected on Bunk'd ✨ Looking for someone who values a tidy home in South Delhi. How is your search going?",
+      timestamp: "12:20 PM",
+      isRead: false
+    }
+  ],
+  u10: [
+    {
+      id: "init_u10",
+      sender: "u10",
+      text: "Hey! Stoked to see another early riser and organized flatmate. Are you searching around Gurgaon or South Delhi?",
+      timestamp: "8:40 AM",
+      isRead: false
+    }
+  ],
+  u14: [
+    {
+      id: "init_u14",
+      sender: "u14",
+      text: "Hey there! Love that our creative vibe and vegan kitchen setup align. Have you checked out flats near Hauz Khas yet?",
+      timestamp: "3:15 PM",
       isRead: false
     }
   ]
@@ -136,8 +176,8 @@ function App() {
   const [typingStatus, setTypingStatus] = useState({});
   const [active, setActive] = useState("Discover");
   const [index, setIndex] = useState(0);
-  const [filter, setFilter] = useState("All");
-  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState(() => read("bunkd_filters", null, DEFAULT_FILTERS));
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [toast, setToast] = useState("");
   const [step, setStep] = useState(0);
@@ -177,12 +217,89 @@ function App() {
     }
   }, [matches]);
 
+  const locations = useMemo(() => ["All", ...new Set(demoUsers.map(u => u.location))], []);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.gender !== "Any") count++;
+    if (filters.food !== "Any") count++;
+    if (filters.drinking !== "Any") count++;
+    if (filters.smoking !== "Any") count++;
+    if (filters.location !== "All") count++;
+    if (filters.sleep !== "Any") count++;
+    if (filters.cleanliness !== "Any") count++;
+    if (filters.moveIn !== "Any") count++;
+    if (filters.budgetMin > 5000 || filters.budgetMax < 30000) count++;
+    return count;
+  }, [filters]);
+
   const candidates = useMemo(() => demoUsers.filter(u => {
     if (likes.includes(u.id) || passes.includes(u.id)) return false;
-    if (filter !== "All" && u.location !== filter) return false;
-    if (profile && (u.budgetMax < profile.budgetMin || u.budgetMin > profile.budgetMax)) return false;
+
+    // 1. Gender filter
+    if (filters.gender !== "Any" && u.gender !== filters.gender) return false;
+
+    // 2. Food preference
+    if (filters.food !== "Any" && u.food !== filters.food) return false;
+
+    // 3. Drinking preference
+    if (filters.drinking !== "Any" && u.drinking !== filters.drinking) return false;
+
+    // 4. Smoking preference
+    if (filters.smoking !== "Any" && u.smoking !== filters.smoking) return false;
+
+    // 5. Preferred location
+    if (filters.location !== "All" && u.location !== filters.location) return false;
+
+    // 6. Sleep schedule
+    if (filters.sleep !== "Any" && u.sleep !== filters.sleep) return false;
+
+    // 7. Cleanliness standard
+    if (filters.cleanliness !== "Any" && u.cleanliness !== filters.cleanliness) return false;
+
+    // 8. Move-in date
+    if (filters.moveIn !== "Any") {
+      const uMove = (u.moveIn || "").toLowerCase();
+      const fMove = filters.moveIn.toLowerCase();
+      if (fMove === "immediate") {
+        if (uMove !== "immediate" && uMove !== "november") return false;
+      } else if (fMove === "next month") {
+        if (uMove !== "next month" && uMove !== "december" && uMove !== "january") return false;
+      } else if (fMove === "flexible") {
+        if (uMove !== "flexible") return false;
+      } else if (uMove !== fMove) return false;
+    }
+
+    // 9. Monthly budget range overlap
+    if (u.budgetMax < filters.budgetMin || u.budgetMin > filters.budgetMax) return false;
+
     return true;
-  }), [likes, passes, filter, profile]);
+  }), [likes, passes, filters]);
+
+  const updateFilters = newFilters => {
+    persist("bunkd_filters", newFilters, setFilters);
+    setIndex(0);
+  };
+
+  const updateSingleFilter = (key, val) => {
+    const next = { ...filters, [key]: val };
+    persist("bunkd_filters", next, setFilters);
+    setIndex(0);
+    notify(`Filter updated`);
+  };
+
+  const updateBudgetFilter = (min, max) => {
+    const next = { ...filters, budgetMin: min, budgetMax: max };
+    persist("bunkd_filters", next, setFilters);
+    setIndex(0);
+    notify(`Budget filter reset`);
+  };
+
+  const clearAllFilters = () => {
+    persist("bunkd_filters", DEFAULT_FILTERS, setFilters);
+    setIndex(0);
+    notify("All filters cleared");
+  };
 
   const current = candidates[index] || candidates[0];
   const nextCandidate = candidates[index + 1] || candidates[1];
@@ -212,7 +329,7 @@ function App() {
       const next = [...likes, current.id];
       persist("bunkd_likes", next, setLikes);
       // Demo simulation: selected profiles reciprocate to make the mutual match flow demonstrable.
-      const reciprocates = ["u1", "u4", "u6"].includes(current.id);
+      const reciprocates = ["u1", "u4", "u6", "u8", "u10", "u14"].includes(current.id);
       if (reciprocates) {
         const updated = [...matches.filter(m => m.id !== current.id), current];
         persist("bunkd_matches", updated, setMatches);
@@ -373,7 +490,7 @@ function App() {
 
   const resetDemo = (fullReset = false) => {
     [
-      "bunkd_likes", "bunkd_passes", "bunkd_matches", "bunkd_messages",
+      "bunkd_likes", "bunkd_passes", "bunkd_matches", "bunkd_messages", "bunkd_filters",
       "livein_likes", "livein_passes", "livein_matches", "livein_messages",
       "roomsync_likes", "roomsync_passes", "roomsync_matches", "roomsync_messages"
     ].forEach(k => localStorage.removeItem(k));
@@ -382,7 +499,7 @@ function App() {
     setMatches([]);
     setMessages({});
     setActiveChatId(null);
-    setFilter("All");
+    setFilters(DEFAULT_FILTERS);
     setIndex(0);
     setCelebration(null);
 
@@ -399,7 +516,7 @@ function App() {
         const demoUser = { ...starterProfile, name: "Aakarsh" };
         persist("bunkd_profile", demoUser, setProfile);
       }
-      notify("All 6 flatmate profiles restored!");
+      notify("All 16 flatmate profiles restored!");
     }
   };
 
@@ -505,27 +622,80 @@ function App() {
             <div className="section-heading">
               <div>
                 <h2>Discover flatmates</h2>
-                <p>Swipe right to like or left to pass. Mutual interest unlocks direct chat.</p>
+                <p>Swipe right to connect or left to pass. Mutual interest unlocks direct chat.</p>
               </div>
-              <button className="filter-button" onClick={() => setShowFilters(!showFilters)}>
-                <SlidersHorizontal size={16} /> Filters
+              <button
+                className={`filter-button ${activeFilterCount > 0 ? "has-active" : ""}`}
+                onClick={() => setShowFilterModal(true)}
+                aria-label="Open discovery filters"
+              >
+                <SlidersHorizontal size={16} />
+                <span>Filters</span>
+                {activeFilterCount > 0 && <span className="filter-badge-count">{activeFilterCount}</span>}
               </button>
             </div>
 
-            {showFilters && (
-              <div className="filter-panel">
-                <label>
-                  Preferred locality
-                  <select value={filter} onChange={e => { setFilter(e.target.value); setIndex(0); }}>
-                    <option>All</option>
-                    {[...new Set(demoUsers.map(u => u.location))].map(x => (
-                      <option key={x}>{x}</option>
-                    ))}
-                  </select>
-                </label>
-                <span className="filter-note">
-                  Your budget: {money(profile.budgetMin)}–{money(profile.budgetMax)}
-                </span>
+            {/* Active Filters Pill Bar */}
+            {activeFilterCount > 0 && (
+              <div className="active-filters-bar">
+                <span className="active-filters-label">Active:</span>
+                {filters.gender !== "Any" && (
+                  <span className="active-chip">
+                    {filters.gender}
+                    <button onClick={() => updateSingleFilter("gender", "Any")} aria-label="Remove gender filter"><X size={12} /></button>
+                  </span>
+                )}
+                {filters.food !== "Any" && (
+                  <span className="active-chip">
+                    {filters.food}
+                    <button onClick={() => updateSingleFilter("food", "Any")} aria-label="Remove food filter"><X size={12} /></button>
+                  </span>
+                )}
+                {filters.drinking !== "Any" && (
+                  <span className="active-chip">
+                    Drinks: {filters.drinking}
+                    <button onClick={() => updateSingleFilter("drinking", "Any")} aria-label="Remove drinking filter"><X size={12} /></button>
+                  </span>
+                )}
+                {filters.smoking !== "Any" && (
+                  <span className="active-chip">
+                    Smokes: {filters.smoking}
+                    <button onClick={() => updateSingleFilter("smoking", "Any")} aria-label="Remove smoking filter"><X size={12} /></button>
+                  </span>
+                )}
+                {filters.location !== "All" && (
+                  <span className="active-chip">
+                    {filters.location}
+                    <button onClick={() => updateSingleFilter("location", "All")} aria-label="Remove location filter"><X size={12} /></button>
+                  </span>
+                )}
+                {filters.sleep !== "Any" && (
+                  <span className="active-chip">
+                    {filters.sleep}
+                    <button onClick={() => updateSingleFilter("sleep", "Any")} aria-label="Remove sleep filter"><X size={12} /></button>
+                  </span>
+                )}
+                {filters.cleanliness !== "Any" && (
+                  <span className="active-chip">
+                    {filters.cleanliness}
+                    <button onClick={() => updateSingleFilter("cleanliness", "Any")} aria-label="Remove cleanliness filter"><X size={12} /></button>
+                  </span>
+                )}
+                {filters.moveIn !== "Any" && (
+                  <span className="active-chip">
+                    Move-in: {filters.moveIn}
+                    <button onClick={() => updateSingleFilter("moveIn", "Any")} aria-label="Remove move-in filter"><X size={12} /></button>
+                  </span>
+                )}
+                {(filters.budgetMin > 5000 || filters.budgetMax < 30000) && (
+                  <span className="active-chip">
+                    ₹{Number(filters.budgetMin).toLocaleString()}–₹{Number(filters.budgetMax).toLocaleString()}
+                    <button onClick={() => updateBudgetFilter(5000, 30000)} aria-label="Remove budget filter"><X size={12} /></button>
+                  </span>
+                )}
+                <button className="clear-all-text-btn" onClick={clearAllFilters}>
+                  Clear all ({activeFilterCount})
+                </button>
               </div>
             )}
 
@@ -662,16 +832,38 @@ function App() {
                   </div>
                 ) : (
                   <div className="empty-state">
-                    <div className="empty-icon"><Compass size={32} /></div>
-                    <h3>You've seen everyone!</h3>
-                    <p>Try changing your location filter or reset the demo to explore profiles again.</p>
-                    <button className="primary-button" onClick={() => { setFilter("All"); setIndex(0); notify("Filters cleared"); }}>
-                      Clear filters
-                    </button>
+                    {activeFilterCount > 0 ? (
+                      <>
+                        <div className="empty-icon"><SlidersHorizontal size={32} /></div>
+                        <h3>No flatmates match your filters</h3>
+                        <p>None of the available flatmates match your active criteria. Try relaxing some options or clear all filters.</p>
+                        <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap", marginTop: "14px" }}>
+                          <button className="primary-button" onClick={clearAllFilters}>
+                            Clear all filters
+                          </button>
+                          <button className="secondary-button" onClick={() => setShowFilterModal(true)}>
+                            Adjust filters
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="empty-icon"><Compass size={32} /></div>
+                        <h3>You've explored all 16 profiles!</h3>
+                        <p>You have reviewed all available flatmates in this demo. Reset the demo anytime to restore all profiles.</p>
+                        <button className="primary-button" onClick={() => resetDemo(false)}>
+                          <RotateCcw size={16} /> Restore all 16 profiles
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
                 <div className="card-counter">
-                  {Math.min(likes.length + passes.length + (current ? 1 : 0), demoUsers.length)} of {demoUsers.length} profiles explored
+                  {candidates.length > 0 ? (
+                    <span>Showing <b>{candidates.length}</b> matching flatmate{candidates.length === 1 ? "" : "s"} · {Math.min(likes.length + passes.length, demoUsers.length)} explored of {demoUsers.length}</span>
+                  ) : (
+                    <span>0 matching flatmates</span>
+                  )}
                 </div>
               </div>
 
@@ -837,6 +1029,24 @@ function App() {
           profile={profile}
           onClose={() => setSelected(null)}
           onChat={matches.some(m => m.id === selected.id) ? () => { setSelected(null); openChatWith(selected); } : null}
+        />
+      )}
+
+      {/* Discovery Filters Modal */}
+      {showFilterModal && (
+        <FilterModal
+          filters={filters}
+          locations={locations}
+          onApply={newFilters => {
+            updateFilters(newFilters);
+            setShowFilterModal(false);
+            notify("Filters applied");
+          }}
+          onClear={() => {
+            clearAllFilters();
+            setShowFilterModal(false);
+          }}
+          onClose={() => setShowFilterModal(false)}
         />
       )}
       {toast && <div className="toast"><Check size={16} />{toast}</div>}
@@ -1437,11 +1647,14 @@ function ProfileModal({ person, profile, onClose, onChat }) {
               </div>
               <div className="details-grid compact">
                 {Object.entries({
+                  Gender: person.gender || "Not specified",
                   Sleep: person.sleep,
                   Cleanliness: person.cleanliness,
+                  Food: person.food,
+                  Drinking: person.drinking || "Not specified",
+                  Smoking: person.smoking,
                   Social: person.social,
                   Guests: person.guests,
-                  Food: person.food,
                   Noise: person.noise,
                   "Move-in": person.moveIn || "Flexible",
                   "Room type": person.roomType || "Either"
@@ -1462,6 +1675,294 @@ function ProfileModal({ person, profile, onClose, onChat }) {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FilterModal({ filters, locations, onApply, onClear, onClose }) {
+  const [draft, setDraft] = useState(filters);
+
+  const setField = (key, value) => {
+    setDraft(prev => ({ ...prev, [key]: value }));
+  };
+
+  const previewCount = useMemo(() => {
+    return demoUsers.filter(u => {
+      if (draft.gender !== "Any" && u.gender !== draft.gender) return false;
+      if (draft.food !== "Any" && u.food !== draft.food) return false;
+      if (draft.drinking !== "Any" && u.drinking !== draft.drinking) return false;
+      if (draft.smoking !== "Any" && u.smoking !== draft.smoking) return false;
+      if (draft.location !== "All" && u.location !== draft.location) return false;
+      if (draft.sleep !== "Any" && u.sleep !== draft.sleep) return false;
+      if (draft.cleanliness !== "Any" && u.cleanliness !== draft.cleanliness) return false;
+      if (draft.moveIn !== "Any") {
+        const uMove = (u.moveIn || "").toLowerCase();
+        const fMove = draft.moveIn.toLowerCase();
+        if (fMove === "immediate") {
+          if (uMove !== "immediate" && uMove !== "november") return false;
+        } else if (fMove === "next month") {
+          if (uMove !== "next month" && uMove !== "december" && uMove !== "january") return false;
+        } else if (fMove === "flexible") {
+          if (uMove !== "flexible") return false;
+        } else if (uMove !== fMove) return false;
+      }
+      if (u.budgetMax < draft.budgetMin || u.budgetMin > draft.budgetMax) return false;
+      return true;
+    }).length;
+  }, [draft]);
+
+  const hasNonDefault = useMemo(() => {
+    return (
+      draft.gender !== DEFAULT_FILTERS.gender ||
+      draft.food !== DEFAULT_FILTERS.food ||
+      draft.drinking !== DEFAULT_FILTERS.drinking ||
+      draft.smoking !== DEFAULT_FILTERS.smoking ||
+      draft.location !== DEFAULT_FILTERS.location ||
+      draft.sleep !== DEFAULT_FILTERS.sleep ||
+      draft.cleanliness !== DEFAULT_FILTERS.cleanliness ||
+      draft.moveIn !== DEFAULT_FILTERS.moveIn ||
+      draft.budgetMin !== DEFAULT_FILTERS.budgetMin ||
+      draft.budgetMax !== DEFAULT_FILTERS.budgetMax
+    );
+  }, [draft]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="filter-modal" onClick={e => e.stopPropagation()}>
+        <div className="filter-modal-header">
+          <div className="filter-modal-title-area">
+            <div className="filter-header-icon">
+              <SlidersHorizontal size={18} />
+            </div>
+            <div>
+              <h3>Discovery Filters</h3>
+              <p>Filter flatmates by verified lifestyle habits</p>
+            </div>
+          </div>
+          <button className="modal-close-static" onClick={onClose} aria-label="Close filters">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="filter-modal-body">
+          {/* Gender */}
+          <div className="filter-group">
+            <span className="filter-group-label">GENDER</span>
+            <div className="filter-chips-row">
+              {["Any", "Male", "Female", "Non-binary"].map(opt => (
+                <button
+                  key={opt}
+                  className={`filter-pill ${draft.gender === opt ? "active" : ""}`}
+                  onClick={() => setField("gender", opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Food Preference */}
+          <div className="filter-group">
+            <span className="filter-group-label">FOOD PREFERENCE</span>
+            <div className="filter-chips-row">
+              {["Any", "Vegetarian", "Non-vegetarian", "Vegan"].map(opt => (
+                <button
+                  key={opt}
+                  className={`filter-pill ${draft.food === opt ? "active" : ""}`}
+                  onClick={() => setField("food", opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Drinking */}
+          <div className="filter-group">
+            <span className="filter-group-label">DRINKING</span>
+            <div className="filter-chips-row">
+              {["Any", "No", "Occasionally", "Yes"].map(opt => (
+                <button
+                  key={opt}
+                  className={`filter-pill ${draft.drinking === opt ? "active" : ""}`}
+                  onClick={() => setField("drinking", opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Smoking */}
+          <div className="filter-group">
+            <span className="filter-group-label">SMOKING</span>
+            <div className="filter-chips-row">
+              {["Any", "No", "Occasionally", "Yes"].map(opt => (
+                <button
+                  key={opt}
+                  className={`filter-pill ${draft.smoking === opt ? "active" : ""}`}
+                  onClick={() => setField("smoking", opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Preferred Locality */}
+          <div className="filter-group">
+            <span className="filter-group-label">PREFERRED LOCALITY</span>
+            <select
+              value={draft.location}
+              onChange={e => setField("location", e.target.value)}
+              className="filter-select"
+            >
+              {locations.map(loc => (
+                <option key={loc} value={loc}>
+                  {loc === "All" ? "All Localities (Delhi NCR)" : loc}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Monthly Budget Range */}
+          <div className="filter-group">
+            <div className="filter-group-header-row">
+              <span className="filter-group-label">MONTHLY BUDGET RANGE</span>
+              <span className="filter-budget-value">
+                ₹{Number(draft.budgetMin).toLocaleString()} – ₹{Number(draft.budgetMax).toLocaleString()}
+              </span>
+            </div>
+            <div className="filter-budget-inputs">
+              <div className="budget-input-field">
+                <small>Min budget</small>
+                <div className="budget-input-wrap">
+                  <span>₹</span>
+                  <input
+                    type="number"
+                    min="4000"
+                    max={draft.budgetMax}
+                    step="1000"
+                    value={draft.budgetMin}
+                    onChange={e => setField("budgetMin", Math.min(Number(e.target.value), draft.budgetMax - 1000))}
+                  />
+                </div>
+              </div>
+              <span className="budget-separator">—</span>
+              <div className="budget-input-field">
+                <small>Max budget</small>
+                <div className="budget-input-wrap">
+                  <span>₹</span>
+                  <input
+                    type="number"
+                    min={draft.budgetMin}
+                    max="35000"
+                    step="1000"
+                    value={draft.budgetMax}
+                    onChange={e => setField("budgetMax", Math.max(Number(e.target.value), draft.budgetMin + 1000))}
+                  />
+                </div>
+              </div>
+            </div>
+            {/* Quick budget presets */}
+            <div className="budget-presets-row">
+              <button
+                className="budget-preset-btn"
+                onClick={() => setDraft(prev => ({ ...prev, budgetMin: 5000, budgetMax: 12000 }))}
+              >
+                Under ₹12k
+              </button>
+              <button
+                className="budget-preset-btn"
+                onClick={() => setDraft(prev => ({ ...prev, budgetMin: 10000, budgetMax: 18000 }))}
+              >
+                ₹10k–18k
+              </button>
+              <button
+                className="budget-preset-btn"
+                onClick={() => setDraft(prev => ({ ...prev, budgetMin: 15000, budgetMax: 26000 }))}
+              >
+                ₹15k–26k
+              </button>
+              <button
+                className="budget-preset-btn"
+                onClick={() => setDraft(prev => ({ ...prev, budgetMin: 5000, budgetMax: 30000 }))}
+              >
+                Any Budget
+              </button>
+            </div>
+          </div>
+
+          {/* Sleep Schedule */}
+          <div className="filter-group">
+            <span className="filter-group-label">SLEEP SCHEDULE</span>
+            <div className="filter-chips-row">
+              {["Any", "Early bird", "Night owl", "Flexible"].map(opt => (
+                <button
+                  key={opt}
+                  className={`filter-pill ${draft.sleep === opt ? "active" : ""}`}
+                  onClick={() => setField("sleep", opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cleanliness Standard */}
+          <div className="filter-group">
+            <span className="filter-group-label">CLEANLINESS STANDARD</span>
+            <div className="filter-chips-row">
+              {["Any", "Very tidy", "Moderate", "Relaxed"].map(opt => (
+                <button
+                  key={opt}
+                  className={`filter-pill ${draft.cleanliness === opt ? "active" : ""}`}
+                  onClick={() => setField("cleanliness", opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Target Move-in */}
+          <div className="filter-group">
+            <span className="filter-group-label">TARGET MOVE-IN</span>
+            <div className="filter-chips-row">
+              {["Any", "Immediate", "Next month", "Flexible"].map(opt => (
+                <button
+                  key={opt}
+                  className={`filter-pill ${draft.moveIn === opt ? "active" : ""}`}
+                  onClick={() => setField("moveIn", opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="filter-modal-footer">
+          <button
+            className="filter-clear-all-btn"
+            onClick={() => setDraft(DEFAULT_FILTERS)}
+            disabled={!hasNonDefault}
+          >
+            Clear All
+          </button>
+          <div className="filter-footer-actions">
+            <button className="secondary-button" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="primary-button filter-apply-btn"
+              onClick={() => onApply(draft)}
+            >
+              Apply Filters ({previewCount})
+            </button>
           </div>
         </div>
       </div>
