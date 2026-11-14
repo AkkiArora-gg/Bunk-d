@@ -1,11 +1,34 @@
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import {
-  Flame, Compass, Heart, MessageCircle, UserRound, SlidersHorizontal,
+  Compass, MessageCircle, UserRound, SlidersHorizontal,
   MapPin, Wallet, Moon, Sparkles, X, Check, CheckCheck, ArrowRight, ArrowLeft, Users,
-  ShieldCheck, RotateCcw, ChevronRight, LogOut, Send, Info
+  ShieldCheck, RotateCcw, ChevronRight, Send, Info, Plus
 } from "lucide-react";
 import { demoUsers, starterProfile, questions } from "./data";
 import { compatibility, explainMatch } from "./matching";
+
+/* ── Bunk'd architectural doorway icon (SVG, sharp at all sizes) ── */
+function DoorIcon({ size = 20, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path
+        d="M4 22V3.5C4 2.67 4.67 2 5.5 2H18.5C19.33 2 20 2.67 20 3.5V22"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.5 22V8C8.5 7.45 8.95 7 9.5 7H14.5C15.05 7 15.5 7.45 15.5 8V22"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <line x1="2" y1="22" x2="22" y2="22" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 const read = (key, fallbackKey, fallback) => {
   try {
@@ -62,7 +85,7 @@ const getInitialMessages = person => {
     {
       id: `init_${person.id}`,
       sender: person.id,
-      text: `Hey! Great to connect on LiveIn. Are you currently exploring flat options in ${person.location}?`,
+      text: `Hey! Great to connect on Bunk'd. Are you currently exploring flat options in ${person.location}?`,
       timestamp: "Just now",
       isRead: false
     }
@@ -104,11 +127,11 @@ const getSimulatedReply = (person, userText) => {
 };
 
 function App() {
-  const [profile, setProfile] = useState(() => read("livein_profile", "roomsync_profile", null));
-  const [likes, setLikes] = useState(() => read("livein_likes", "roomsync_likes", []));
-  const [passes, setPasses] = useState(() => read("livein_passes", "roomsync_passes", []));
-  const [matches, setMatches] = useState(() => read("livein_matches", "roomsync_matches", []));
-  const [messages, setMessages] = useState(() => read("livein_messages", "roomsync_messages", {}));
+  const [profile, setProfile] = useState(() => read("bunkd_profile", "livein_profile", null));
+  const [likes, setLikes] = useState(() => read("bunkd_likes", "livein_likes", []));
+  const [passes, setPasses] = useState(() => read("bunkd_passes", "livein_passes", []));
+  const [matches, setMatches] = useState(() => read("bunkd_matches", "livein_matches", []));
+  const [messages, setMessages] = useState(() => read("bunkd_messages", "livein_messages", {}));
   const [activeChatId, setActiveChatId] = useState(null);
   const [typingStatus, setTypingStatus] = useState({});
   const [active, setActive] = useState("Discover");
@@ -149,7 +172,7 @@ function App() {
         }
       });
       if (changed) {
-        persist("livein_messages", updated, setMessages);
+        persist("bunkd_messages", updated, setMessages);
       }
     }
   }, [matches]);
@@ -178,7 +201,7 @@ function App() {
 
   const saveProfile = () => {
     if (!form.name.trim()) return notify("Please enter your name first.");
-    persist("livein_profile", form, setProfile);
+    persist("bunkd_profile", form, setProfile);
     setActive("Discover");
     notify("Your profile is ready. Let's find your flatmate!");
   };
@@ -187,18 +210,18 @@ function App() {
     if (!current) return;
     if (type === "like") {
       const next = [...likes, current.id];
-      persist("livein_likes", next, setLikes);
+      persist("bunkd_likes", next, setLikes);
       // Demo simulation: selected profiles reciprocate to make the mutual match flow demonstrable.
       const reciprocates = ["u1", "u4", "u6"].includes(current.id);
       if (reciprocates) {
         const updated = [...matches.filter(m => m.id !== current.id), current];
-        persist("livein_matches", updated, setMatches);
+        persist("bunkd_matches", updated, setMatches);
 
         // Pre-seed conversation with greeting
         setMessages(prev => {
           if (!prev[current.id]) {
             const initial = { ...prev, [current.id]: getInitialMessages(current) };
-            localStorage.setItem("livein_messages", JSON.stringify(initial));
+            localStorage.setItem("bunkd_messages", JSON.stringify(initial));
             return initial;
           }
           return prev;
@@ -212,7 +235,7 @@ function App() {
         notify(`You liked ${current.name}`);
       }
     } else {
-      persist("livein_passes", [...passes, current.id], setPasses);
+      persist("bunkd_passes", [...passes, current.id], setPasses);
       notify(`Passed ${current.name}`);
     }
     setIndex(0);
@@ -229,7 +252,7 @@ function App() {
       const thread = prev[person.id] || getInitialMessages(person);
       const updatedThread = thread.map(m => ({ ...m, isRead: true }));
       const updated = { ...prev, [person.id]: updatedThread };
-      localStorage.setItem("livein_messages", JSON.stringify(updated));
+      localStorage.setItem("bunkd_messages", JSON.stringify(updated));
       return updated;
     });
   };
@@ -247,7 +270,7 @@ function App() {
     const currentThread = messages[personId] || [];
     const nextThread = [...currentThread, userMsg];
     const nextMessages = { ...messages, [personId]: nextThread };
-    persist("livein_messages", nextMessages, setMessages);
+    persist("bunkd_messages", nextMessages, setMessages);
 
     // Simulate typing and reply from the matched person
     const matchedPerson = matches.find(m => m.id === personId);
@@ -273,7 +296,7 @@ function App() {
       setMessages(prev => {
         const thread = prev[personId] || [];
         const updated = { ...prev, [personId]: [...thread, replyMsg] };
-        localStorage.setItem("livein_messages", JSON.stringify(updated));
+        localStorage.setItem("bunkd_messages", JSON.stringify(updated));
         return updated;
       });
 
@@ -350,6 +373,7 @@ function App() {
 
   const resetDemo = (fullReset = false) => {
     [
+      "bunkd_likes", "bunkd_passes", "bunkd_matches", "bunkd_messages",
       "livein_likes", "livein_passes", "livein_matches", "livein_messages",
       "roomsync_likes", "roomsync_passes", "roomsync_matches", "roomsync_messages"
     ].forEach(k => localStorage.removeItem(k));
@@ -363,6 +387,7 @@ function App() {
     setCelebration(null);
 
     if (fullReset) {
+      localStorage.removeItem("bunkd_profile");
       localStorage.removeItem("livein_profile");
       localStorage.removeItem("roomsync_profile");
       setProfile(null);
@@ -372,7 +397,7 @@ function App() {
     } else {
       if (!profile) {
         const demoUser = { ...starterProfile, name: "Aakarsh" };
-        persist("livein_profile", demoUser, setProfile);
+        persist("bunkd_profile", demoUser, setProfile);
       }
       notify("All 6 flatmate profiles restored!");
     }
@@ -384,7 +409,7 @@ function App() {
 
   const nav = [
     ["Discover", Compass],
-    ["Matches", Heart],
+    ["Matches", Users],
     ["Chat", MessageCircle],
     ["Profile", UserRound]
   ];
@@ -411,8 +436,8 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-icon"><Flame size={22} fill="white" /></div>
-          <span>Live<span className="brand-accent">In</span></span>
+          <div className="brand-icon"><DoorIcon size={20} color="white" /></div>
+          <span>Bunk<span className="brand-accent">'d</span></span>
         </div>
         <div className="side-label">MENU</div>
         {nav.map(([label, Icon]) => {
@@ -436,7 +461,7 @@ function App() {
           <div className="side-card">
             <Sparkles size={18} />
             <b>Find flatmates on your wavelength.</b>
-            <p>LiveIn compares everyday habits, schedules, and vibes to find compatible roommates.</p>
+            <p>Bunk'd compares everyday habits, schedules, and living routines to find compatible roommates.</p>
           </div>
           <button className="nav-item" style={{ fontSize: "12px", color: "var(--text-muted)" }} onClick={() => resetDemo(false)}>
             <RotateCcw size={16} /> Reset demo
@@ -558,12 +583,12 @@ function App() {
                         {/* Stamp Badges */}
                         {likeOpacity > 0.05 && (
                           <div className="stamp-badge stamp-like" style={{ opacity: likeOpacity }}>
-                            LIKE
+                            CONNECT
                           </div>
                         )}
                         {nopeOpacity > 0.05 && (
                           <div className="stamp-badge stamp-nope" style={{ opacity: nopeOpacity }}>
-                            NOPE
+                            PASS
                           </div>
                         )}
 
@@ -626,9 +651,10 @@ function App() {
                             className="like-action"
                             onClick={e => { e.stopPropagation(); triggerSwipeExit("like"); }}
                             onPointerDown={e => e.stopPropagation()}
-                            aria-label="Like"
+                            aria-label="Interested"
+                            title="Interested in connecting"
                           >
-                            <Heart size={24} fill="currentColor" />
+                            <Check size={26} strokeWidth={2.8} />
                           </button>
                         </div>
                       </div>
@@ -651,10 +677,10 @@ function App() {
 
               <aside className="insight-column">
                 <div className="insight-card purple-card">
-                  <div className="insight-icon"><Flame size={20} /></div>
+                  <div className="insight-icon"><DoorIcon size={18} color="var(--primary)" /></div>
                   <span className="eyebrow">YOUR MATCHING STYLE</span>
                   <h3>Compatibility over coincidence.</h3>
-                  <p>LiveIn compares everyday habits, sleep rhythms, cleanliness, and social routines for peaceful living.</p>
+                  <p>Bunk'd compares everyday habits, sleep rhythms, cleanliness, and social routines for peaceful living.</p>
                 </div>
                 <div className="insight-card">
                   <span className="eyebrow">YOUR PREFERENCES</span>
@@ -704,9 +730,9 @@ function App() {
               </div>
             ) : (
               <div className="empty-state wide">
-                <div className="empty-icon"><Heart size={32} /></div>
+                <div className="empty-icon"><Users size={32} /></div>
                 <h3>Your matches will show up here</h3>
-                <p>Swipe right on profiles in Discover. Seeded flatmates will reciprocate so you can test the mutual match experience!</p>
+                <p>Express interest in profiles in Discover. Seeded flatmates will reciprocate so you can test the mutual match experience!</p>
                 <button className="primary-button" onClick={() => setActive("Discover")}>
                   Explore flatmates
                 </button>
@@ -729,7 +755,7 @@ function App() {
                     const thread = prev[id] || [];
                     const updatedThread = thread.map(m => ({ ...m, isRead: true }));
                     const updated = { ...prev, [id]: updatedThread };
-                    localStorage.setItem("livein_messages", JSON.stringify(updated));
+                    localStorage.setItem("bunkd_messages", JSON.stringify(updated));
                     return updated;
                   });
                 }
@@ -783,13 +809,13 @@ function App() {
               ))}
             </div>
             <button className="danger-link" onClick={() => resetDemo(true)}>
-              <LogOut size={16} /> Reset demo profile
+              <RotateCcw size={16} /> Reset demo profile
             </button>
           </section>
         )}
 
         <footer className="footer">
-          LiveIn <span>·</span> Find your kind of flatmate <span>·</span> Lifestyle Discovery MVP
+          Bunk'd <span>·</span> Find your perfect flatmate <span>·</span> Lifestyle Matching Platform
         </footer>
       </main>
 
@@ -827,15 +853,15 @@ function MatchCelebrationModal({ userAvatar, userName, matchPerson, result, onSe
         </div>
         <h1>It's a Match!</h1>
         <p className="match-subtitle">
-          You and <b>{matchPerson.name}</b> liked each other's living preferences.
+          You and <b>{matchPerson.name}</b> are mutually interested in sharing a flat.
         </p>
 
         <div className="match-avatars-row">
           <div className="match-avatar-circle left-avatar">
             <img src={userAvatar} alt={userName} />
           </div>
-          <div className="match-heart-center">
-            <Heart size={22} fill="currentColor" />
+          <div className="match-connection-center">
+            <DoorIcon size={22} color="white" />
           </div>
           <div className="match-avatar-circle right-avatar">
             <img src={matchPerson.avatar} alt={matchPerson.name} />
@@ -1068,7 +1094,7 @@ function ChatView({
             <div className="chat-match-intro">
               <div className="intro-dual-avatars">
                 <img src={profile.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=600"} alt={profile.name} className="intro-avatar user" />
-                <div className="intro-heart-badge"><Heart size={14} fill="currentColor" /></div>
+                <div className="intro-connection-badge"><DoorIcon size={12} color="white" /></div>
                 <img src={activePerson.avatar} alt={activePerson.name} className="intro-avatar match" />
               </div>
               <h4>You and {activePerson.name} connected</h4>
@@ -1182,8 +1208,8 @@ function Onboarding({ form, setForm, step, setStep, onFinish }) {
   return (
     <div className="onboarding">
       <div className="onboard-brand">
-        <div className="brand-icon"><Flame size={22} fill="white" /></div>
-        Live<span>In</span>
+        <div className="brand-icon"><DoorIcon size={20} color="white" /></div>
+        <span>Bunk<span className="brand-accent">'d</span></span>
       </div>
       <div className="onboard-wrap">
         <div className="onboard-top">
